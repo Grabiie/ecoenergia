@@ -1,0 +1,296 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Calculadora EcoEnergia</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: uma coluna de "ficha de consumo" — aparelhos à esquerda, resumo da conta fixo ao lado no desktop; tudo empilhado no celular */
+:root{
+  --bg:#f3f6f4; --surface:#ffffff; --ink:#132320; --muted:#5b6d68; --line:#d5dfdb;
+  --accent:#0f7a5c; --accent-soft:#d9efe7; --amber:#c77a06; --amber-soft:#fbecd2; --bad:#b4372c;
+  --display:"Archivo",system-ui,sans-serif; --body:"Inter",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1614; --surface:#15211e; --ink:#e4eeea; --muted:#94a8a2; --line:#27372f;
+  --accent:#3cc497; --accent-soft:#163a2e; --amber:#f0a83a; --amber-soft:#3a2a10; --bad:#ef7a6e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1614; --surface:#15211e; --ink:#e4eeea; --muted:#94a8a2; --line:#27372f;
+  --accent:#3cc497; --accent-soft:#163a2e; --amber:#f0a83a; --amber-soft:#3a2a10; --bad:#ef7a6e; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:clamp(26px,4vw,38px);font-weight:800}
+h2{font-size:20px;font-weight:700}
+.lede{color:var(--muted);max-width:62ch;margin:6px 0 0}
+.eyebrow{font:600 12px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.grid>*{min-width:0;margin:0;width:100%}
+.tools select{flex:1 1 180px;width:auto}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.sticky{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+@media (max-width:860px){.sticky{position:static}}
+label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+input,select{font:500 15px var(--body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:480px){.row2{grid-template-columns:1fr}}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+button{font:600 14px var(--body);border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 12px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+button.ghost{border-color:transparent;background:transparent;color:var(--muted);padding:6px 8px}
+button:hover{filter:brightness(.97)}
+.table{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:620px;font-variant-numeric:tabular-nums}
+th{font:600 12px var(--body);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:6px 6px;border-bottom:1px solid var(--line)}
+td{padding:6px;border-bottom:1px solid var(--line);vertical-align:middle}
+td input{padding:6px 8px;font-size:14px}
+td.num{font-family:var(--mono);text-align:right;white-space:nowrap}
+th.num{text-align:right}
+.w-name{width:34%}.w-s{width:11%}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.meter{font-family:var(--mono);font-weight:700;font-size:clamp(30px,5vw,42px);letter-spacing:-.02em;line-height:1}
+.meter small{font-size:.45em;color:var(--muted);font-weight:500;margin-left:4px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kpi{display:flex;flex-direction:column;gap:6px}
+.kpi .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.bars{display:flex;flex-direction:column;gap:8px}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;font-size:13.5px}
+.bar .track{grid-column:1/-1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.bar .fill{height:100%;background:var(--accent);border-radius:4px}
+.bar:first-child .fill{background:var(--amber)}
+.bar .v{font-family:var(--mono);color:var(--muted)}
+.tips{display:flex;flex-direction:column;gap:10px}
+.tip{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.tip input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent)}
+.tip b{display:block;font-weight:600}
+.tip span{font-size:13px;color:var(--muted)}
+.tip .gain{font-family:var(--mono);color:var(--accent);font-weight:700;white-space:nowrap}
+.tip.off .gain{color:var(--muted)}
+.save{background:var(--accent-soft);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:4px}
+.save .meter{color:var(--accent)}
+.badge{display:inline-block;font:600 11px var(--body);letter-spacing:.05em;text-transform:uppercase;background:var(--amber-soft);color:var(--amber);border-radius:999px;padding:3px 8px}
+.res{font-family:var(--mono);font-size:15px;padding:12px;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
+.res.good{border-color:var(--accent);color:var(--accent)}
+.res.bad{border-color:var(--bad);color:var(--bad)}
+footer{color:var(--muted);font-size:12.5px;max-width:80ch}
+footer a{color:var(--accent)}
+@media (prefers-reduced-motion:no-preference){.bar .fill{transition:width .3s ease}}
+</style></head><body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Desafio EcoEnergia · ODS 7 e 13</div>
+    <h1>Quanto cada aparelho pesa na sua conta de luz?</h1>
+    <p class="lede">Ajuste os aparelhos da sua casa, o tempo de uso e o valor do kWh da sua conta. A calculadora mostra o gasto de cada um e quanto você economiza com hábitos simples.</p>
+  </header>
+
+  <div class="grid">
+    <div class="wrap" style="gap:22px">
+      <section class="panel" aria-labelledby="t-tar">
+        <h2 id="t-tar">1. Valor da energia</h2>
+        <div class="row2">
+          <label for="tarifa">Preço do kWh (R$)
+            <input id="tarifa" type="number" inputmode="decimal" step="0.01" min="0" value="0.95">
+          </label>
+          <label for="bandeira">Bandeira tarifária do mês
+            <select id="bandeira">
+              <option value="0">Verde (sem custo extra)</option>
+              <option value="0.01885">Amarela (+R$ 1,885 a cada 100 kWh)</option>
+              <option value="0.04463">Vermelha 1 (+R$ 4,463 a cada 100 kWh)</option>
+              <option value="0.07877">Vermelha 2 (+R$ 7,877 a cada 100 kWh)</option>
+            </select>
+          </label>
+        </div>
+        <p class="hint">Para achar o preço exato do seu kWh: divida o <b>valor total</b> da conta pelos <b>kWh consumidos</b> no mês. Os valores das bandeiras são os da ANEEL em 2025 e podem mudar.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="t-ap">
+        <div class="tools" style="justify-content:space-between">
+          <h2 id="t-ap">2. Aparelhos da casa</h2>
+          <span class="badge" id="exemplo">Exemplo de casa · edite à vontade</span>
+        </div>
+        <div class="table">
+          <table>
+            <thead><tr>
+              <th class="w-name">Aparelho</th><th class="w-s">Potência (W)</th><th class="w-s">Qtd.</th><th class="w-s">Horas/dia</th><th class="w-s">Dias/mês</th><th class="num">kWh/mês</th><th class="num">R$/mês</th><th></th>
+            </tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="tools">
+          <select id="preset" aria-label="Escolher aparelho para adicionar"></select>
+          <button class="primary" id="add">Adicionar aparelho</button>
+          <button class="ghost" id="reset">Voltar ao exemplo</button>
+        </div>
+        <p class="hint">Horas por dia aceitam frações: 15 minutos = 0,25; 30 minutos = 0,5. Geladeira e standby ficam ligados 24 h, com a potência média já considerando que o motor liga e desliga.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="t-med">
+        <h2 id="t-med">4. Leitura do medidor (para o desafio)</h2>
+        <p class="hint">Anote o número do relógio de luz no início e no fim do desafio. Compare com a média diária da sua última conta.</p>
+        <div class="row2">
+          <label for="l1">Leitura inicial (kWh)<input id="l1" type="number" inputmode="decimal" placeholder="ex.: 45210"></label>
+          <label for="l2">Leitura final (kWh)<input id="l2" type="number" inputmode="decimal" placeholder="ex.: 45238"></label>
+          <label for="ld">Dias entre as leituras<input id="ld" type="number" inputmode="numeric" value="7"></label>
+          <label for="ck">kWh da última conta<input id="ck" type="number" inputmode="decimal" placeholder="ex.: 150"></label>
+          <label for="cd">Dias do período da conta<input id="cd" type="number" inputmode="numeric" value="30"></label>
+        </div>
+        <div class="res" id="medres" aria-live="polite">Preencha as leituras para ver o resultado.</div>
+      </section>
+    </div>
+
+    <aside class="wrap sticky" style="gap:22px">
+      <section class="panel" aria-labelledby="t-res">
+        <h2 id="t-res">3. Sua conta estimada</h2>
+        <div class="kpis">
+          <div class="kpi"><span class="lbl">Por mês</span><div class="meter" id="totR">R$ 0</div></div>
+          <div class="kpi"><span class="lbl">Consumo</span><div class="meter" id="totK">0<small>kWh</small></div></div>
+        </div>
+        <div class="bars" id="bars" aria-label="Aparelhos que mais gastam"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="t-eco">
+        <h2 id="t-eco">Simule a economia</h2>
+        <div class="tips" id="tips"></div>
+        <div class="save">
+          <span class="kpi lbl" style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;color:var(--muted)">Economia com as metas marcadas</span>
+          <div class="meter" id="ecoR">R$ 0<small>/mês</small></div>
+          <span class="hint" id="ecoA">R$ 0 por ano · 0 kWh por mês</span>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <footer>
+    Estimativas para orientação, não substituem a conta da distribuidora. Referências: orientações da Cemig sobre consumo consciente (Agência Minas, 2026), bandeiras tarifárias da ANEEL (2025) e Selo Procel. Projeto extensionista EcoEnergia – Ciência da Computação, UNIFRAN.
+  </footer>
+</div>
+
+<script>
+(function(){
+  const PRESETS=[
+    {n:"Chuveiro elétrico",w:5500,h:0.5,d:30,q:1,k:"chuveiro"},
+    {n:"Geladeira",w:60,h:24,d:30,q:1,k:"geladeira"},
+    {n:"Ar-condicionado 9.000 BTU",w:900,h:4,d:20,q:1,k:"ar"},
+    {n:"Ventilador",w:100,h:8,d:30,q:1},
+    {n:"TV LED 43\"",w:90,h:5,d:30,q:1},
+    {n:"Lâmpada LED 9 W",w:9,h:5,d:30,q:6,k:"led"},
+    {n:"Lâmpada incandescente 60 W",w:60,h:5,d:30,q:2,k:"inc"},
+    {n:"Máquina de lavar",w:500,h:1,d:12,q:1},
+    {n:"Ferro de passar",w:1000,h:1,d:8,q:1},
+    {n:"Micro-ondas",w:1200,h:0.25,d:30,q:1},
+    {n:"Computador / notebook",w:120,h:4,d:30,q:1},
+    {n:"Carregador de celular",w:10,h:3,d:30,q:2},
+    {n:"Aparelhos em standby",w:35,h:24,d:30,q:1,k:"standby"},
+    {n:"Outro aparelho",w:100,h:1,d:30,q:1}
+  ];
+  const EXEMPLO=[0,1,3,4,5,6,7,9,11,12].map(i=>({...PRESETS[i]}));
+  const $=id=>document.getElementById(id);
+  const brl=v=>v.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:v<100?2:0});
+  const num=(v,d=1)=>v.toLocaleString("pt-BR",{maximumFractionDigits:d});
+  let items=load()||EXEMPLO.map(x=>({...x}));
+  let goals={banho:true,verao:true,standby:true,led:false,ar:false};
+
+  function load(){try{const s=localStorage.getItem("eco-itens");return s?JSON.parse(s):null}catch(e){return null}}
+  function save(){try{localStorage.setItem("eco-itens",JSON.stringify(items))}catch(e){}}
+  function price(){return (parseFloat($("tarifa").value)||0)+(parseFloat($("bandeira").value)||0)}
+  const kwh=it=>(it.w*it.q*it.h*it.d)/1000;
+
+  PRESETS.forEach((p,i)=>{const o=document.createElement("option");o.value=i;o.textContent=p.n;$("preset").appendChild(o)});
+
+  function renderRows(){
+    const tb=$("rows");tb.innerHTML="";
+    items.forEach((it,i)=>{
+      const tr=document.createElement("tr");
+      tr.innerHTML=`<td><input id="n${i}" aria-label="Nome do aparelho" value="${it.n.replace(/"/g,"&quot;")}"></td>
+      <td><input id="w${i}" type="number" min="0" inputmode="decimal" aria-label="Potência em watts" value="${it.w}"></td>
+      <td><input id="q${i}" type="number" min="0" inputmode="numeric" aria-label="Quantidade" value="${it.q}"></td>
+      <td><input id="h${i}" type="number" min="0" max="24" step="0.25" inputmode="decimal" aria-label="Horas por dia" value="${it.h}"></td>
+      <td><input id="d${i}" type="number" min="0" max="31" inputmode="numeric" aria-label="Dias por mês" value="${it.d}"></td>
+      <td class="num" id="k${i}"></td><td class="num" id="r${i}"></td>
+      <td><button class="ghost" aria-label="Remover ${it.n}" data-del="${i}">✕</button></td>`;
+      tb.appendChild(tr);
+      ["n","w","q","h","d"].forEach(f=>{$(f+i).addEventListener("input",e=>{
+        const v=e.target.value;it[f]=f==="n"?v:Math.max(0,parseFloat(String(v).replace(",","."))||0);
+        $("exemplo").hidden=true;save();calc();})});
+    });
+    tb.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{items.splice(+b.dataset.del,1);$("exemplo").hidden=true;save();renderRows();calc();}));
+  }
+
+  function totals(list){const p=price();let k=0;list.forEach(it=>k+=kwh(it));return {k,r:k*p};}
+
+  function applyGoals(list,g){
+    return list.map(it=>{
+      const c={...it};
+      if(g.banho&&c.k==="chuveiro"){c.h=Math.max(0,c.h-5/60);}
+      if(g.verao&&c.k==="chuveiro"){c.w=c.w*0.6;}
+      if(g.standby&&c.k==="standby"){c.w=0;}
+      if(g.led&&c.k==="inc"){c.w=9;}
+      if(g.ar&&c.k==="ar"){c.h=Math.max(0,c.h-1);}
+      return c;
+    });
+  }
+
+  const TIPS=[
+    {id:"banho",t:"Banho 5 minutos mais curto",s:"Por dia, somando a casa toda"},
+    {id:"verao",t:"Chuveiro na posição verão",s:"Usa cerca de 40% menos potência"},
+    {id:"standby",t:"Tirar aparelhos do standby",s:"Desligar da tomada ou usar régua com botão"},
+    {id:"led",t:"Trocar lâmpadas comuns por LED",s:"60 W por 9 W, mesma luz"},
+    {id:"ar",t:"1 hora a menos de ar-condicionado",s:"Use ventilador e ventilação natural"}
+  ];
+
+  function renderTips(){
+    const box=$("tips");box.innerHTML="";
+    TIPS.forEach(tp=>{
+      const lab=document.createElement("label");lab.className="tip";lab.htmlFor="g-"+tp.id;
+      lab.innerHTML=`<input type="checkbox" id="g-${tp.id}" ${goals[tp.id]?"checked":""}><span><b>${tp.t}</b><span>${tp.s}</span></span><span class="gain" id="gg-${tp.id}"></span>`;
+      box.appendChild(lab);
+      lab.querySelector("input").addEventListener("change",e=>{goals[tp.id]=e.target.checked;calc();});
+    });
+  }
+
+  function calc(){
+    const p=price();
+    items.forEach((it,i)=>{const k=kwh(it);$("k"+i).textContent=num(k);$("r"+i).textContent=brl(k*p);});
+    const T=totals(items);
+    $("totR").textContent=brl(T.r);$("totK").innerHTML=num(T.k,0)+"<small>kWh</small>";
+    const sorted=items.map(it=>({n:it.n,k:kwh(it)})).filter(x=>x.k>0).sort((a,b)=>b.k-a.k).slice(0,5);
+    const max=sorted[0]?sorted[0].k:1;
+    $("bars").innerHTML=sorted.map(x=>`<div class="bar"><span>${String(x.n).replace(/</g,"&lt;")}</span><span class="v">${brl(x.k*p)}</span><div class="track"><div class="fill" style="width:${(x.k/max*100).toFixed(1)}%"></div></div></div>`).join("")||'<p class="hint">Adicione aparelhos para ver o resultado.</p>';
+    const G=totals(applyGoals(items,goals));const eco=Math.max(0,T.r-G.r);
+    $("ecoR").innerHTML=brl(eco)+"<small>/mês</small>";
+    $("ecoA").textContent=`${brl(eco*12)} por ano · ${num(Math.max(0,T.k-G.k))} kWh a menos por mês`;
+    TIPS.forEach(tp=>{
+      const one=Math.max(0,T.r-totals(applyGoals(items,{[tp.id]:true})).r);
+      const el=$("gg-"+tp.id);if(!el)return;
+      el.textContent=one>0?"−"+brl(one):"—";
+      el.parentElement.classList.toggle("off",!goals[tp.id]);
+    });
+  }
+
+  function medidor(){
+    const l1=parseFloat($("l1").value),l2=parseFloat($("l2").value),ld=parseFloat($("ld").value),ck=parseFloat($("ck").value),cd=parseFloat($("cd").value);
+    const out=$("medres");out.className="res";
+    if(!(l2>l1)||!(ld>0)){out.textContent="Preencha as leituras para ver o resultado.";return;}
+    const dia=(l2-l1)/ld;let txt=`Consumo no desafio: ${num(dia,2)} kWh por dia (${num(l2-l1)} kWh em ${num(ld,0)} dias).`;
+    if(ck>0&&cd>0){const base=ck/cd;const pct=(dia-base)/base*100;
+      txt+=` Média da última conta: ${num(base,2)} kWh por dia. `;
+      if(pct<0){txt+=`Você reduziu ${num(-pct,1)}% — cerca de ${brl((base-dia)*30*price())} por mês.`;out.classList.add("good");}
+      else{txt+=`O consumo ficou ${num(pct,1)}% acima da média. Confira os aparelhos que mais gastam ao lado.`;out.classList.add("bad");}}
+    out.textContent=txt;
+  }
+
+  $("add").addEventListener("click",()=>{items.push({...PRESETS[+$("preset").value]});$("exemplo").hidden=true;save();renderRows();calc();});
+  $("reset").addEventListener("click",()=>{items=EXEMPLO.map(x=>({...x}));$("exemplo").hidden=false;try{localStorage.removeItem("eco-itens")}catch(e){};renderRows();calc();});
+  ["tarifa","bandeira"].forEach(id=>$(id).addEventListener("input",()=>{calc();medidor();}));
+  ["l1","l2","ld","ck","cd"].forEach(id=>$(id).addEventListener("input",medidor));
+  if(load())$("exemplo").hidden=true;
+  renderTips();renderRows();calc();
+})();
+</script>
+</body></html>
